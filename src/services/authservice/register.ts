@@ -122,7 +122,7 @@ export async function register(userData: RegisterRequest): Promise<RegisterRespo
         id: userId,
         username: userData.username,
         email: userData.email,
-        // password_hash: passwordHash, // TODO: Uncomment after migration
+        password_hash: passwordHash,
       }
     });
 
