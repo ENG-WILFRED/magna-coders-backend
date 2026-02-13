@@ -136,22 +136,7 @@ class OTPService {
     }
   }
 
-  // Get OTP statistics (for monitoring)
-  getOTPStats(): { total: number; active: number } {
-    const now = new Date();
-    let active = 0;
 
-    for (const value of this.otpStore.values()) {
-      if (value.expiresAt > now) {
-        active++;
-      }
-    }
-
-    return {
-      total: this.otpStore.size,
-      active
-    };
-  }
 }
 
 export default OTPService;

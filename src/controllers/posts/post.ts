@@ -18,7 +18,7 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 	if (sortBy === 'trending') {
 		orderBy.likesCount = 'desc';
 	} else {
-		orderBy.createdAt = 'desc';
+		orderBy.created_at = 'desc';
 	}
 
 	const [posts, total] = await Promise.all([

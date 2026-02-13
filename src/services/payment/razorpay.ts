@@ -46,10 +46,12 @@ interface ClientError {
   details?: any;
 }
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || '',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || ''
-});
+const razorpay = process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET
+  ? new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET
+    })
+  : null;
 
 const logger = {
   info: (message: string, data?: any) => {
@@ -65,7 +67,7 @@ const logger = {
 
 export const createRazorpayPaymentIntent = async (data: PaymentData): Promise<RazorpayOrderResponse> => {
   try {
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    if (!razorpay) {
       const error: ClientError = {
         message: 'Razorpay not configured. Missing API keys.',
         statusCode: 500

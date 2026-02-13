@@ -1,14 +1,13 @@
 import express, { Router } from 'express';
-// Auth controllers temporarily disabled
+import {
+  register,
+  login,
+  getUserProfile,
+  updateUserProfile,
+  refreshToken
+} from '../controllers/auth';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticateToken } from '../middleware/auth';
-
-// Stub functions for disabled auth controller
-const loginUser = (req: any, res: any) => res.status(501).json({ message: 'Auth endpoints temporarily disabled' });
-const signupUser = (req: any, res: any) => res.status(501).json({ message: 'Auth endpoints temporarily disabled' });
-const getUserProfile = (req: any, res: any) => res.status(501).json({ message: 'Auth endpoints temporarily disabled' });
-const updateUserProfile = (req: any, res: any) => res.status(501).json({ message: 'Auth endpoints temporarily disabled' });
-const refreshAccessToken = (req: any, res: any) => res.status(501).json({ message: 'Auth endpoints temporarily disabled' });
 
 /**
  * @swagger
@@ -82,7 +81,7 @@ const router: Router = express.Router();
  *       500:
  *         description: Server error
  */
-router.post('/login', asyncHandler(loginUser));
+router.post('/login', asyncHandler(login));
 
 /**
  * @swagger
@@ -116,7 +115,7 @@ router.post('/login', asyncHandler(loginUser));
  *       401:
  *         description: Invalid or expired refresh token
  */
-router.post('/refresh', asyncHandler(refreshAccessToken));
+router.post('/refresh', asyncHandler(refreshToken));
 
 /**
  * @swagger
@@ -155,7 +154,7 @@ router.post('/refresh', asyncHandler(refreshAccessToken));
  *       500:
  *         description: Server error
  */
-router.post('/register', asyncHandler(signupUser));
+router.post('/register', asyncHandler(register));
 
 /**
  * @swagger
