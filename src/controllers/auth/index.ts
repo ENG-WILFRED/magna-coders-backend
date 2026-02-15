@@ -41,28 +41,33 @@ export const register = async (req: Request, res: Response): Promise<void> => {
   }
 };
 
-// Login user
+// Login user (accepts `identifier` which may be email, phone or username)
 export const login = async (req: Request, res: Response): Promise<void> => {
   try {
-    const { email, password, otp } = req.body;
+    const { identifier, password, otp } = req.body;
 
-    if (!email || !password) {
+    if (!identifier || !password) {
       res.status(400).json({
         success: false,
-        message: 'Email and password are required'
+        message: 'Identifier and password are required'
       });
       return;
     }
 
-    // Find user by email first
-    const user = await prisma.users.findUnique({
-      where: { email: email.toLowerCase() }
+    // Find user by email (case-insensitive), phone or username
+    const user = await prisma.users.findFirst({
+      where: {
+        OR: [
+          { email: identifier.toLowerCase() },
+          { username: { equals: identifier, mode: 'insensitive' } }
+        ]
+      }
     });
 
     if (!user) {
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid identifier or password'
       });
       return;
     }
@@ -80,16 +85,22 @@ export const login = async (req: Request, res: Response): Promise<void> => {
     if (!isValidPassword) {
       res.status(401).json({
         success: false,
-        message: 'Invalid email or password'
+        message: 'Invalid identifier or password'
       });
       return;
     }
 
     // Generate JWT token
-    const token = jwt.sign(
+    const accessToken = jwt.sign(
       { id: user.id, email: user.email },
       process.env.JWT_SECRET || 'fallback-secret-key',
       { expiresIn: '7d' }
+    );
+
+    const refreshToken = jwt.sign(
+      { id: user.id, type: 'refresh' },
+      process.env.JWT_SECRET || 'fallback-secret-key',
+      { expiresIn: '30d' }
     );
 
     res.status(200).json({
@@ -101,7 +112,8 @@ export const login = async (req: Request, res: Response): Promise<void> => {
           username: user.username,
           email: user.email
         },
-        token
+        accessToken,
+        refreshToken
       }
     });
   } catch (error: any) {

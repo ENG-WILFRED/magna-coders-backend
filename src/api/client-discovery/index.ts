@@ -1,8 +1,6 @@
 import express from 'express';
-import { ClientDiscoveryAgent } from '../../AI-assistant/client-discovery-agent/agent';
 
 const router = express.Router();
-const agent = new ClientDiscoveryAgent();
 
 router.get('/find-clients', async (req, res) => {
   try {
@@ -13,8 +11,8 @@ router.get('/find-clients', async (req, res) => {
       return res.status(400).json({ error: 'User ID is required' });
     }
 
-    const clients = await agent.findClients(query, userId);
-    return res.json({ clients });
+    // Client discovery agent not implemented yet
+    return res.status(501).json({ error: 'Client discovery not implemented' });
   } catch (error) {
     const err = error as Error;
     if (err.message.includes('eligibility')) {
@@ -29,8 +27,7 @@ router.get('/find-clients', async (req, res) => {
 router.get('/linkedin/auth-url', (req, res) => {
   try {
     const state = req.query.state as string || 'default';
-    const authUrl = agent.generateLinkedInAuthUrl(state);
-    return res.json({ authUrl });
+    return res.status(501).json({ error: 'LinkedIn auth URL generation not implemented' });
   } catch (error) {
     const err = error as Error;
     return res.status(500).json({ error: err.message });
@@ -45,10 +42,7 @@ router.post('/linkedin/callback', async (req, res) => {
       return res.status(400).json({ error: 'Authorization code and user ID are required' });
     }
 
-    const tokenData = await agent.exchangeCodeForToken(code);
-    await agent.storeUserLinkedInToken(userId, tokenData);
-
-    return res.json({ success: true, message: 'LinkedIn account connected successfully' });
+    return res.status(501).json({ error: 'LinkedIn callback handling not implemented' });
   } catch (error) {
     const err = error as Error;
     return res.status(500).json({ error: err.message });

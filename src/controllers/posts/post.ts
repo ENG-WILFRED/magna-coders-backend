@@ -8,15 +8,30 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 	const page = Math.max(Number(req.query.page || 1), 1);
 	const limit = Math.max(Number(req.query.limit || 10), 1);
 	const skip = (page - 1) * limit;
-	const { categoryId, authorId, sortBy } = req.query as Record<string, string>;
+	const { categoryId, authorId, sortBy, postType, tags } = req.query as Record<string, string>;
 
 	const where: any = {};
 	if (categoryId) where.category_id = categoryId;
 	if (authorId) where.author_id = authorId;
+	if (postType) where.post_type = postType;
+
+	// Tag filtering
+	if (tags) {
+		const tagNames = tags.split(',').map(t => t.trim().toLowerCase());
+		where.post_tags = {
+			some: {
+				tags: {
+					name: {
+						in: tagNames
+					}
+				}
+			}
+		};
+	}
 
 	const orderBy: any = {};
 	if (sortBy === 'trending') {
-		orderBy.likesCount = 'desc';
+		orderBy.likes = { _count: 'desc' };
 	} else {
 		orderBy.created_at = 'desc';
 	}
@@ -33,6 +48,14 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 				},
 				categories: {
 					select: { id: true, name: true }
+				},
+				post_tags: {
+					include: { tags: { select: { id: true, name: true } } }
+				},
+				likes: { select: { id: true } },
+				comments: { select: { id: true } },
+				_count: {
+					select: { likes: true, comments: true }
 				}
 			}
 		}),
@@ -41,21 +64,44 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 
 	const totalPages = Math.ceil(total / limit);
 
-	res.status(200).json({ posts, totalPages, currentPage: page });
+	res.status(200).json({ 
+		posts: posts.map(post => ({
+			...post,
+			likesCount: post._count.likes,
+			commentsCount: post._count.comments,
+			tags: post.post_tags.map(pt => pt.tags)
+		})), 
+		totalPages, 
+		currentPage: page,
+		total
+	});
 };
 
 const getPostById = async (req: Request, res: Response): Promise<void> => {
 	const { id } = req.params;
+	const userId = req.user;
 
 	const post = await prisma.posts.findUnique({
 		where: { id },
 		include: {
 			author: { select: { id: true, username: true, avatar_url: true } },
 			categories: { select: { id: true, name: true } },
+			post_tags: { include: { tags: { select: { id: true, name: true } } } },
 			comments: {
 				orderBy: { created_at: 'desc' },
-				include: { author: { select: { id: true, username: true, avatar_url: true } } },
-				take: 20
+				where: { parent_id: null },
+				take: 10,
+				include: { 
+					author: { select: { id: true, username: true, avatar_url: true } },
+					replies: {
+						orderBy: { created_at: 'asc' },
+						include: { author: { select: { id: true, username: true, avatar_url: true } } }
+					}
+				}
+			},
+			likes: { select: { id: true, user_id: true } },
+			_count: {
+				select: { likes: true, comments: true }
 			}
 		}
 	}).catch(() => null);
@@ -65,12 +111,18 @@ const getPostById = async (req: Request, res: Response): Promise<void> => {
 		return;
 	}
 
-	res.status(200).json(post);
+	res.status(200).json({
+		...post,
+		likesCount: post._count.likes,
+		commentsCount: post._count.comments,
+		isLiked: userId ? post.likes.some(l => l.user_id === userId) : false,
+		tags: post.post_tags.map(pt => pt.tags)
+	});
 };
 
 const createPost = async (req: Request, res: Response): Promise<void> => {
 	const authorId = req.user;
-	const { title, content, postType, tags, categoryId } = req.body;
+	const { title, content, post_type = 'regular', tags, categoryId } = req.body;
 
 	if (!authorId) {
 		res.status(401).json({ message: 'Authentication required' });
@@ -82,17 +134,58 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
 		return;
 	}
 
+	const postId = uuidv4();
+	
 	const post = await prisma.posts.create({
 		data: {
-			id: uuidv4(),
+			id: postId,
 			title: title.trim(),
 			content: content || null,
+			post_type: post_type,
 			category_id: categoryId || null,
 			author_id: authorId,
 		}
 	});
 
-	res.status(201).json(post);
+	// Add tags if provided
+	if (tags && Array.isArray(tags) && tags.length > 0) {
+		const tagIds = await Promise.all(
+			tags.map(async (tagName: string) => {
+				const tag = await prisma.tags.findUnique({
+					where: { name: tagName.trim().toLowerCase() }
+				});
+				if (tag) return tag.id;
+				const newTag = await prisma.tags.create({
+					data: { id: uuidv4(), name: tagName.trim().toLowerCase() }
+				});
+				return newTag.id;
+			})
+		);
+
+		await Promise.all(
+			tagIds.map(tagId =>
+				prisma.post_tags.create({
+					data: { id: uuidv4(), post_id: postId, tag_id: tagId }
+				})
+			)
+		);
+	}
+
+	const createdPost = await prisma.posts.findUnique({
+		where: { id: postId },
+		include: {
+			author: { select: { id: true, username: true, avatar_url: true } },
+			post_tags: { include: { tags: { select: { id: true, name: true } } } },
+			_count: { select: { likes: true, comments: true } }
+		}
+	});
+
+	res.status(201).json({
+		...createdPost,
+		likesCount: createdPost?._count.likes || 0,
+		commentsCount: createdPost?._count.comments || 0,
+		tags: createdPost?.post_tags.map(pt => pt.tags) || []
+	});
 };
 
 const updatePost = async (req: Request, res: Response): Promise<void> => {
@@ -100,7 +193,7 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
 	const userId = req.user;
 	const { title, content, tags, categoryId } = req.body;
 
-	if (!userId) {
+	if (!userId || !id) {
 		res.status(401).json({ message: 'Authentication required' });
 		return;
 	}
@@ -125,7 +218,50 @@ const updatePost = async (req: Request, res: Response): Promise<void> => {
 		}
 	});
 
-	res.status(200).json(updated);
+	// Update tags if provided
+	if (tags && Array.isArray(tags)) {
+		// Remove old tags
+		await prisma.post_tags.deleteMany({ where: { post_id: id } });
+
+		// Add new tags
+		if (tags.length > 0) {
+			const tagIds = await Promise.all(
+				tags.map(async (tagName: string) => {
+					const tag = await prisma.tags.findUnique({
+						where: { name: tagName.trim().toLowerCase() }
+					});
+					if (tag) return tag.id;
+					const newTag = await prisma.tags.create({
+						data: { id: uuidv4(), name: tagName.trim().toLowerCase() }
+					});
+					return newTag.id;
+				})
+			);
+
+			await Promise.all(
+				tagIds.map(tagId =>
+					prisma.post_tags.create({
+						data: { id: uuidv4(), post_id: id, tag_id: tagId }
+					})
+				)
+			);
+		}
+	}
+
+	const updatedPost = await prisma.posts.findUnique({
+		where: { id },
+		include: {
+			post_tags: { include: { tags: { select: { id: true, name: true } } } },
+			_count: { select: { likes: true, comments: true } }
+		}
+	});
+
+	res.status(200).json({
+		...updatedPost,
+		likesCount: updatedPost?._count.likes || 0,
+		commentsCount: updatedPost?._count.comments || 0,
+		tags: updatedPost?.post_tags.map(pt => pt.tags) || []
+	});
 };
 
 const deletePost = async (req: Request, res: Response): Promise<void> => {
@@ -154,7 +290,7 @@ const deletePost = async (req: Request, res: Response): Promise<void> => {
 };
 
 const likePost = async (req: Request, res: Response): Promise<void> => {
-	const { id } = req.params; // post id
+	const { id } = req.params;
 	const userId = req.user;
 
 	if (!userId || !id) {
@@ -162,19 +298,61 @@ const likePost = async (req: Request, res: Response): Promise<void> => {
 		return;
 	}
 
-	const existing = await prisma.likes.findFirst({ where: { post_id: id, user_id: userId } });
-
-	if (existing) {
-		// unlike
-		await prisma.likes.delete({ where: { id: existing.id } });
-		res.status(200).json({ liked: false });
+	// Verify post exists
+	const post = await prisma.posts.findUnique({ where: { id } });
+	if (!post) {
+		res.status(404).json({ message: 'Post not found' });
 		return;
 	}
 
-	// like
-	await prisma.likes.create({ data: { id: uuidv4(), post_id: id, user_id: userId } });
+	const existing = await prisma.likes.findFirst({
+		where: { post_id: id, user_id: userId }
+	});
 
-	res.status(200).json({ liked: true });
+	if (existing) {
+		res.status(400).json({ message: 'Post already liked' });
+		return;
+	}
+
+	await prisma.likes.create({
+		data: { id: uuidv4(), post_id: id, user_id: userId }
+	});
+
+	const likesCount = await prisma.likes.count({ where: { post_id: id } });
+
+	res.status(200).json({ liked: true, likesCount });
 };
 
-export { getPosts, getPostById, createPost, updatePost, deletePost, likePost };
+const unlikePost = async (req: Request, res: Response): Promise<void> => {
+	const { id } = req.params;
+	const userId = req.user;
+
+	if (!userId || !id) {
+		res.status(401).json({ message: 'Authentication required' });
+		return;
+	}
+
+	// Verify post exists
+	const post = await prisma.posts.findUnique({ where: { id } });
+	if (!post) {
+		res.status(404).json({ message: 'Post not found' });
+		return;
+	}
+
+	const existing = await prisma.likes.findFirst({
+		where: { post_id: id, user_id: userId }
+	});
+
+	if (!existing) {
+		res.status(400).json({ message: 'Post not liked' });
+		return;
+	}
+
+	await prisma.likes.delete({ where: { id: existing.id } });
+
+	const likesCount = await prisma.likes.count({ where: { post_id: id } });
+
+	res.status(200).json({ liked: false, likesCount });
+};
+
+export { getPosts, getPostById, createPost, updatePost, deletePost, likePost, unlikePost };

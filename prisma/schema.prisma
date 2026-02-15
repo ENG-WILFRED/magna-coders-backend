@@ -8,8 +8,6 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-
-
 model users {
   id                          String                 @id @db.Uuid
   username                    String                 @unique @db.VarChar
@@ -38,9 +36,18 @@ model users {
   messages                    messages[]             @relation("senderMessages")
   notifications               notifications[]
   opportunities               opportunities[]
+  applications                applications[]
+  bookmarks                   bookmarks[]
+  files                       files[]
   posts                       posts[]
   projectMemberships          project_members[]
   projects                    projects[]             @relation("owner")
+    project_contributors        project_contributors[]
+    project_applications        project_applications[]
+    project_bookmarks           project_bookmarks[]
+    project_comments            project_comments[]
+    project_analytics           project_analytics[]
+    project_events              project_events[]
   reels                       reels[]
   categories                  user_categories[]
   roles                       user_roles[]
@@ -104,24 +111,27 @@ model categories {
   opportunities   opportunities[]
   posts           posts[]
   projects        projects[]
+    project_categories project_categories[]
   user_categories user_categories[]
 
   @@map("categories")
 }
 
 model posts {
-  id           String       @id @db.Uuid
-  title        String       @db.VarChar
-  content      String?
-  author_id    String       @db.Uuid
-  category_id  String?      @db.Uuid
-  created_at   DateTime?    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  updated_at   DateTime?    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  comments     comments[]
-  likes        likes[]
-  post_media   post_media[]
-  author       users        @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  categories   categories?  @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  id          String       @id @db.Uuid
+  title       String       @db.VarChar
+  content     String?
+  post_type   String       @default("regular") @db.VarChar
+  author_id   String       @db.Uuid
+  category_id String?      @db.Uuid
+  created_at  DateTime?    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at  DateTime?    @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  comments    comments[]
+  likes       likes[]
+  post_media  post_media[]
+  post_tags   post_tags[]
+  author      users        @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categories  categories?  @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
 
   @@map("posts")
 }
@@ -136,6 +146,24 @@ model post_media {
   @@map("post_media")
 }
 
+model tags {
+  id        String      @id @db.Uuid
+  name      String      @unique @db.VarChar
+  post_tags post_tags[]
+
+  @@map("tags")
+}
+
+model post_tags {
+  id      String @id @db.Uuid
+  post_id String @db.Uuid
+  tag_id  String @db.Uuid
+  posts   posts  @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  tags    tags   @relation(fields: [tag_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("post_tags")
+}
+
 model media {
   id         String       @id @db.Uuid
   url        String       @db.VarChar
@@ -147,41 +175,234 @@ model media {
 }
 
 model comments {
-  id         String    @id @db.Uuid
+  id         String     @id @db.Uuid
   content    String
-  author_id  String    @db.Uuid
-  post_id    String    @db.Uuid
-  created_at DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  updated_at DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  author     users     @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  posts      posts     @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  author_id  String     @db.Uuid
+  post_id    String     @db.Uuid
+  parent_id  String?    @db.Uuid
+  created_at DateTime?  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at DateTime?  @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  author     users      @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  posts      posts      @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent     comments?  @relation("CommentReplies", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies    comments[] @relation("CommentReplies")
+  likes      likes[]
 
   @@map("comments")
 }
 
 model likes {
-  id      String @id @db.Uuid
-  user_id String @db.Uuid
-  post_id String @db.Uuid
-  posts   posts  @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  users   users  @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id         String    @id @db.Uuid
+  user_id    String    @db.Uuid
+  post_id    String?   @db.Uuid
+  comment_id String?   @db.Uuid
+  posts      posts?    @relation(fields: [post_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  comment    comments? @relation(fields: [comment_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users      users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("likes")
 }
 
 model projects {
-  id              String            @id @db.Uuid
-  title           String            @db.VarChar
-  description     String?
-  owner_id        String            @db.Uuid
-  category_id     String?           @db.Uuid
-  created_at      DateTime?         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  updated_at      DateTime?         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  categories      categories?       @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
-  owner           users             @relation("owner", fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  project_members project_members[]
-
+    project_members project_members[] @relation("ProjectMembers")
+  id                String            @id @db.Uuid
+  members_needed    Int?              @default(0)
+  deadline          DateTime?         @db.Timestamptz(6)
+  slug              String?           @unique @db.VarChar
+  title             String            @db.VarChar
+  description       String?           @db.Text
+  short_description String?           @db.VarChar
+  owner_id          String            @db.Uuid
+  team_id           String?           @db.Uuid
+  category_id       String?           @db.Uuid
+  status            String            @default("draft") @db.VarChar
+  visibility        String            @default("public") @db.VarChar
+  type              String?           @db.VarChar
+  tech_stack        String[]          @db.VarChar
+  skills_needed     String[]          @db.VarChar
+  tags              String[]          @db.VarChar
+  looking_for_contributors Boolean    @default(false)
+  contributor_count Int?              @default(0)
+  max_contributors  Int?
+  start_date        DateTime?
+  end_date          DateTime?
+  deadline_for_joining DateTime?
+  repository_url    String?
+  live_demo_url     String?
+  documentation_url String?
+  featured_image_url String?
+  location          String?
+  city              String?
+  region            String?
+  country           String?
+  lat               Float?
+  lng               Float?
+  remote            Boolean?          @default(false)
+  compensation_type String?           @db.VarChar
+  compensation_details String?
+  difficulty_level  String?           @db.VarChar
+  project_size      String?           @db.VarChar
+  team_size         Int?
+  open_positions    Int?
+  views_count       Int?              @default(0)
+  applications_count Int?             @default(0)
+  contributors_count Int?             @default(0)
+  comments_count    Int?              @default(0)
+  is_bookmarked     Boolean?          @default(false)
+  is_applied        Boolean?          @default(false)
+  created_at        DateTime?         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at        DateTime?         @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  published_at      DateTime?
+  meta_title        String?
+  meta_description  String?
+  og_image          String?
+  owner             users             @relation("owner", fields: [owner_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categories        categories?       @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  project_contributors project_contributors[]
+  project_tasks     project_tasks[]
+  project_applications project_applications[]
+  project_bookmarks project_bookmarks[]
+  project_attachments project_attachments[] @relation("ProjectAttachments")
+  project_comments  project_comments[]
+  project_analytics project_analytics[]
+  project_events    project_events[]
+  project_tags      project_tags[]
+  project_skills    project_skills[]
+  project_categories project_categories[]
   @@map("projects")
+}
+
+model project_contributors {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  user_id      String   @db.Uuid
+  role         String?  @db.VarChar
+  status       String   @default("invited") @db.VarChar
+  joined_at    DateTime?
+  start_date   DateTime?
+  end_date     DateTime?
+  contributions_count Int? @default(0)
+  last_activity DateTime?
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_contributors")
+}
+
+model project_tasks {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  title        String   @db.VarChar
+  description  String?
+  status       String   @default("to-do") @db.VarChar
+  assigned_to  String?
+  due_date     DateTime?
+  priority     String?  @db.VarChar
+  created_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_tasks")
+}
+
+model project_applications {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  user_id      String   @db.Uuid
+  cover_message String?
+  status       String   @default("applied") @db.VarChar
+  submitted_at DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  reviewed_at  DateTime?
+  review_notes String?
+  applicant_skills String[] @db.VarChar
+  experience_level String?
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_applications")
+}
+
+model project_bookmarks {
+  id           String   @id @db.Uuid
+  user_id      String   @db.Uuid
+  project_id   String   @db.Uuid
+  saved_at     DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_bookmarks")
+}
+
+model project_attachments {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  file_id      String   @db.Uuid
+  projects     projects @relation("ProjectAttachments", fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  files        files    @relation("FileProjectAttachments", fields: [file_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_attachments")
+}
+
+model project_comments {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  user_id      String   @db.Uuid
+  parent_id    String?  @db.Uuid
+  body         String?
+  attachments  String[] @db.VarChar
+  likes_count  Int?     @default(0)
+  created_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  edited_at    DateTime?
+  moderation_flags String[] @db.VarChar
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  users        users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  parent       project_comments? @relation("ProjectCommentReplies", fields: [parent_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  replies      project_comments[] @relation("ProjectCommentReplies")
+  @@map("project_comments")
+}
+
+model project_categories {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  category_id  String   @db.Uuid
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categories   categories @relation(fields: [category_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_categories")
+}
+
+model project_tags {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  tag          String   @db.VarChar
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_tags")
+}
+
+model project_skills {
+  id           String   @id @db.Uuid
+  project_id   String   @db.Uuid
+  skill        String   @db.VarChar
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_skills")
+}
+
+model project_analytics {
+  id           String   @id @db.Uuid
+  user_id      String?  @db.Uuid
+  project_id   String   @db.Uuid
+  type         String   @db.VarChar
+  metadata     Json?
+  created_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  users        users?   @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_analytics")
+}
+
+model project_events {
+  id           String   @id @db.Uuid
+  user_id      String?  @db.Uuid
+  project_id   String   @db.Uuid
+  type         String   @db.VarChar
+  metadata     Json?
+  created_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  users        users?   @relation(fields: [user_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  projects     projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  @@map("project_events")
 }
 
 model project_members {
@@ -190,24 +411,92 @@ model project_members {
   user_id    String   @db.Uuid
   role       String?  @db.VarChar
   joined_at  DateTime @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  projects   projects @relation(fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  projects   projects @relation("ProjectMembers", fields: [project_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
   user       users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("project_members")
 }
 
 model opportunities {
-  id          String      @id @db.Uuid
-  title       String      @db.VarChar
-  description String?
-  author_id   String      @db.Uuid
-  category_id String?     @db.Uuid
-  created_at  DateTime?   @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  updated_at  DateTime?   @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  author      users       @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  categories  categories? @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  id           String         @id @db.Uuid
+  title        String         @db.VarChar
+  description  String?
+  company      String?        @db.VarChar
+  company_id   String?        @db.Uuid
+  location     String?        @db.VarChar
+  salary       String?        @db.VarChar
+  job_type     String?        @db.VarChar
+  deadline     DateTime?      @db.Timestamptz(6)
+  author_id    String         @db.Uuid
+  category_id  String?        @db.Uuid
+  created_at   DateTime?      @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at   DateTime?      @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  author       users          @relation(fields: [author_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  categories   categories?    @relation(fields: [category_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  company_ref  companies?     @relation(fields: [company_id], references: [id], onDelete: SetNull, onUpdate: NoAction)
+  applications applications[]
+  bookmarks    bookmarks[]
 
   @@map("opportunities")
+}
+
+model companies {
+  id            String          @id @db.Uuid
+  name          String          @db.VarChar
+  slug          String?         @unique @db.VarChar
+  logo_url      String?
+  website_url   String?
+  description   String?
+  verified      Boolean         @default(false)
+  location      String?
+  created_at    DateTime?       @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  updated_at    DateTime?       @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  opportunities opportunities[]
+
+  @@map("companies")
+}
+
+model applications {
+  id             String    @id @db.Uuid
+  opportunity_id String    @db.Uuid
+  user_id        String    @db.Uuid
+  resume_url     String?
+  cover_letter   String?
+  status         String    @default("submitted")
+  submitted_at   DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  metadata       Json?
+
+  opportunity opportunities @relation(fields: [opportunity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user        users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("applications")
+}
+
+model bookmarks {
+  id             String    @id @db.Uuid
+  user_id        String    @db.Uuid
+  opportunity_id String    @db.Uuid
+  saved_at       DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+
+  user        users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  opportunity opportunities @relation(fields: [opportunity_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("bookmarks")
+}
+
+model files {
+    project_attachments project_attachments[] @relation("FileProjectAttachments")
+  id               String    @id @db.Uuid
+  url              String
+  filename         String
+  mime_type        String
+  size             Int?
+  uploaded_by      String    @db.Uuid
+  uploaded_at      DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
+  purpose          String?
+  uploaded_by_user users     @relation(fields: [uploaded_by], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@map("files")
 }
 
 model events {
@@ -224,13 +513,13 @@ model events {
 }
 
 model friends {
-  id        String    @id @db.Uuid
-  user_id   String    @db.Uuid
-  friend_id String    @db.Uuid
-  status    String    @default("pending") @db.VarChar
+  id         String    @id @db.Uuid
+  user_id    String    @db.Uuid
+  friend_id  String    @db.Uuid
+  status     String    @default("pending") @db.VarChar
   created_at DateTime? @default(dbgenerated("timezone('utc'::text, now())")) @db.Timestamptz(6)
-  friendOf  users     @relation("friendOf", fields: [friend_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  user      users     @relation("userFriends", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  friendOf   users     @relation("friendOf", fields: [friend_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  user       users     @relation("userFriends", fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("friends")
 }

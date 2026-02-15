@@ -1,13 +1,27 @@
+
 import express, { Router } from 'express';
 import {
   getProjects,
   getProjectById,
   createProject,
   updateProject,
-  deleteProject
-} from '../controllers';
+  deleteProject,
+  addProjectMember,
+  removeProjectMember,
+  getProjectMembers,
+  getProjectTasks,
+  getProjectFiles,
+  getProjectActivity
+} from '../controllers/projects';
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticateToken } from '../middleware/auth';
+
+const router: Router = express.Router();
+
+// Project Tasks/Issues
+router.get('/:projectId/tasks', authenticateToken, asyncHandler(getProjectTasks));
+// Project Files/Assets
+router.get('/:projectId/files', authenticateToken, asyncHandler(getProjectFiles));
 
 /**
  * @swagger
@@ -77,7 +91,6 @@ import { authenticateToken } from '../middleware/auth';
  *           format: date-time
  */
 
-const router: Router = express.Router();
 
 /**
  * @swagger
@@ -352,5 +365,16 @@ router.delete('/:id', authenticateToken, asyncHandler(deleteProject));
  *         description: Server error
  */
 // router.post('/:projectId/bid/:bidId/accept', authenticateToken, asyncHandler(acceptBid));
+
+
+// --- Project Members ---
+router.post('/:projectId/members', authenticateToken, asyncHandler(addProjectMember));
+router.delete('/:projectId/members/:userId', authenticateToken, asyncHandler(removeProjectMember));
+
+// Project Members
+router.get('/:projectId/members', authenticateToken, asyncHandler(getProjectMembers));
+
+// Project Activity/History
+router.get('/:projectId/activity', authenticateToken, asyncHandler(getProjectActivity));
 
 export default router;

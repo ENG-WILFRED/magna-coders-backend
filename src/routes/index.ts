@@ -8,17 +8,32 @@ import socialRoutes from './social';
 import otpRoutes from './otp';
 import integrationRoutes from './integrations';
 import webhookRoutes from './webhooks';
+import jobRoutes from './jobs';
+import tagRoutes from './tags';
+import applicationRoutes from './applications';
+import bookmarkRoutes from './bookmarks';
+import fileRoutes from './files';
+import companyRoutes from './companies';
 
 const router: Router = express.Router();
 
 // API Routes
 router.use('/auth', authRoutes);
 router.use('/posts', postRoutes);
+router.use('/jobs', jobRoutes);
+router.use('/tags', tagRoutes);
 router.use('/projects', projectRoutes);
 router.use('/comments', commentRoutes);
 router.use('/chat', chatRoutes);
 router.use('/social', socialRoutes);
 router.use('/otp', otpRoutes);
+import opportunityRoutes from './opportunities';
+router.use('/opportunities', opportunityRoutes);
+
+router.use('/applications', applicationRoutes);
+router.use('/bookmarks', bookmarkRoutes);
+router.use('/files', fileRoutes);
+router.use('/companies', companyRoutes);
 
 // Integration Routes (Social Media & Payments)
 router.use('/integrations', integrationRoutes);

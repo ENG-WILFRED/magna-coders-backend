@@ -205,6 +205,7 @@ router.get('/status/:identifier', asyncHandler(async (req: express.Request, res:
       active: 0
     }
   });
+  return;
 }));
 
 

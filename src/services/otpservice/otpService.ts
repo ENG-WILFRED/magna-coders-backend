@@ -63,7 +63,7 @@ class OTPService {
   }
 
   // Send OTP via Email
-  async sendEmailOTP(email: string, otp: string, subject: string = 'Your OTP Code'): Promise<void> {
+  async sendEmailOTP(identifier: string, otp: string, subject: string = 'Your OTP Code'): Promise<void> {
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
         <h2 style="color: #333;">${subject}</h2>
@@ -80,32 +80,32 @@ class OTPService {
     `;
 
     // In production, integrate with actual email service
-    console.log(`📧 Email OTP sent to ${email}: ${otp}`);
+    console.log(`📧 Email OTP sent to ${identifier}: ${otp}`);
 
     // Store OTP for verification
-    await this.storeOTP(email, otp);
+    await this.storeOTP(identifier, otp);
   }
 
   // Send OTP via SMS
-  async sendSMSOTP(phone: string, otp: string): Promise<void> {
+  async sendSMSOTP(identifier: string, otp: string): Promise<void> {
     const message = `Your Magna Coders OTP is: ${otp}. Valid for 10 minutes.`;
 
     // In production, integrate with SMS service (Twilio, AWS SNS, etc.)
-    console.log(`📱 SMS OTP sent to ${phone}: ${otp}`);
+    console.log(`📱 SMS OTP sent to ${identifier}: ${otp}`);
 
     // Store OTP for verification
-    await this.storeOTP(phone, otp);
+    await this.storeOTP(identifier, otp);
   }
 
   // Send OTP via WhatsApp
-  async sendWhatsAppOTP(phone: string, otp: string): Promise<void> {
+  async sendWhatsAppOTP(identifier: string, otp: string): Promise<void> {
     const message = `🔐 Your Magna Coders OTP is: *${otp}*\n\nValid for 10 minutes.\n\nIf you didn't request this, please ignore.`;
 
     // In production, integrate with WhatsApp service
-    console.log(`📱 WhatsApp OTP sent to ${phone}: ${otp}`);
+    console.log(`📱 WhatsApp OTP sent to ${identifier}: ${otp}`);
 
     // Store OTP for verification
-    await this.storeOTP(phone, otp);
+    await this.storeOTP(identifier, otp);
   }
 
   // Send OTP via multiple channels
@@ -134,6 +134,18 @@ class OTPService {
         this.otpStore.delete(key);
       }
     }
+  }
+
+  // Get OTP statistics
+  getOTPStats(): { active: number; total: number } {
+    const now = new Date();
+    let active = 0;
+    for (const value of this.otpStore.values()) {
+      if (value.expiresAt > now) active += 1;
+    }
+
+    const total = this.otpStore.size;
+    return { active, total };
   }
 
 

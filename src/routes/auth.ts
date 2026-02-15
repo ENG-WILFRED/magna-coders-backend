@@ -62,11 +62,12 @@ const router: Router = express.Router();
  *           schema:
  *             type: object
  *             required:
- *               - email
+ *               - identifier
  *               - password
  *             properties:
- *               email:
+ *               identifier:
  *                 type: string
+ *                 description: Email, phone number or username
  *               password:
  *                 type: string
  *     responses:

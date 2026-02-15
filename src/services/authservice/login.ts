@@ -6,7 +6,8 @@ import { SECRET } from '../../utils/config';
 const prisma = new PrismaClient();
 
 interface LoginRequest {
-  username: string;
+  username: any;
+  identifier: string;
   password: string;
   otp?: string;
 }
@@ -62,22 +63,25 @@ function generateRefreshToken(userId: string): string {
 // Login user with security checks
 export async function login(credentials: LoginRequest): Promise<LoginResponse> {
   try {
-    if (!credentials.username || !credentials.password) {
+    if (!credentials.identifier || !credentials.password) {
       const error: LoginError = {
         code: 'INVALID_CREDENTIALS',
-        message: 'Username and password are required',
+        message: 'Identifier and password are required',
         statusCode: 400
       };
       logger.error('Invalid login credentials', error);
       throw error;
     }
 
-    logger.info('Attempting login', { username: credentials.username });
+    logger.info('Attempting login', { identifier: credentials.identifier });
 
-    // Find user
+    // Find user by email, phone or username
     const user = await prisma.users.findFirst({
       where: {
-        username: { equals: credentials.username, mode: 'insensitive' }
+        OR: [
+          { email: credentials.identifier.toLowerCase() },
+          { username: { equals: credentials.identifier, mode: 'insensitive' } }
+        ]
       }
     });
 

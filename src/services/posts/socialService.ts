@@ -59,7 +59,7 @@ class SocialService {
         where: {
           user_id: userId,
           ...(targetType === 'post' && { post_id: targetId }),
-          // ...(targetType === 'comment' && { comment_id: targetId })
+          ...(targetType === 'comment' && { comment_id: targetId })
         }
       });
 
@@ -85,9 +85,9 @@ class SocialService {
         if (targetType === 'post') {
           likeData.post_id = targetId;
         }
-        // if (targetType === 'comment') {
-        //   likeData.comment_id = targetId;
-        // }
+        if (targetType === 'comment') {
+          likeData.comment_id = targetId;
+        }
 
         await prisma.likes.create({
           data: likeData
@@ -107,6 +107,21 @@ class SocialService {
               title: 'Post Liked',
               message: `Someone liked your post "${post.title}"`,
               postId: targetId,
+              senderId: userId
+            });
+          }
+        } else if (targetType === 'comment') {
+          const comment = await prisma.comments.findUnique({
+            where: { id: targetId },
+            select: { author_id: true, content: true }
+          });
+          if (comment && comment.author_id !== userId) {
+            await this.createNotification({
+              userId: comment.author_id,
+              type: 'LIKE',
+              title: 'Comment Liked',
+              message: `Someone liked your comment`,
+              commentId: targetId,
               senderId: userId
             });
           }

@@ -15,8 +15,13 @@ class AuthService {
   }
 
   // Login user
-  async login(credentials: { username: string; password: string; otp?: string }): Promise<any> {
-    return await login(credentials);
+  async login(credentials: { identifier: string; password: string; otp?: string }): Promise<any> {
+    // map common 'username' field if provided by callers
+    const payload: any = { ...credentials };
+    if ((credentials as any).username && !payload.identifier) {
+      payload.identifier = (credentials as any).username;
+    }
+    return await login(payload);
   }
 
   // Logout user

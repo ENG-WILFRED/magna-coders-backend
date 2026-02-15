@@ -1,14 +1,15 @@
 import express, { Router } from 'express';
-// Comments controllers temporarily disabled
-const getComments = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const createComment = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const updateComment = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const deleteComment = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const createReply = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const likeComment = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
-const likeReply = (req: any, res: any) => res.status(501).json({ message: 'Comments endpoints temporarily disabled' });
 import { asyncHandler } from '../middleware/errorHandler';
 import { authenticateToken } from '../middleware/auth';
+import {
+	getComments,
+	createComment,
+	updateComment,
+	deleteComment,
+	getCommentById,
+	likeComment,
+	likeReply
+} from '../controllers/comments';
 
 /**
  * @swagger
@@ -84,7 +85,7 @@ const router: Router = express.Router();
  *       500:
  *         description: Server error
  */
-router.get('/post/:postId', asyncHandler(getComments));
+router.get('/post/:id', asyncHandler(getComments));
 
 /**
  * @swagger
@@ -126,7 +127,7 @@ router.get('/post/:postId', asyncHandler(getComments));
  *       500:
  *         description: Server error
  */
-router.post('/post/:postId', authenticateToken, asyncHandler(createComment));
+router.post('/post/:id', authenticateToken, asyncHandler(createComment));
 
 /**
  * @swagger
@@ -237,6 +238,28 @@ router.delete('/:id', authenticateToken, asyncHandler(deleteComment));
  *       500:
  *         description: Server error
  */
+// createReply: delegate to createComment by resolving parent comment -> post id
+const createReply = async (req: any, res: any) => {
+	const { commentId } = req.params;
+	// find parent comment to get post id
+	try {
+	} catch (e) {
+		// ignore
+	}
+	// lookup parent via Prisma directly
+	const { PrismaClient } = await import('@prisma/client');
+	const p = new PrismaClient();
+	const parentComment = await p.comments.findUnique({ where: { id: commentId } });
+	await p.$disconnect();
+	if (!parentComment) {
+		res.status(404).json({ message: 'Parent comment not found' });
+		return;
+	}
+	// set post id param expected by createComment (it expects req.params.id)
+	req.params.id = parentComment.post_id;
+	req.body.parentId = commentId;
+	return createComment(req, res);
+};
 router.post('/:commentId/reply', authenticateToken, asyncHandler(createReply));
 
 /**
