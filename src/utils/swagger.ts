@@ -15,8 +15,8 @@ const options: swaggerJsdoc.Options = {
     },
     servers: [
       {
-        url: 'https://b5d1-41-89-129-11.ngrok-free.app',
-        description: 'Local development server'
+        url: 'https://magna-coders-backend-1.onrender.com',
+        description: 'Production server'
       },
             {
         url: `http://localhost:${process.env.PORT || 3000}`,
