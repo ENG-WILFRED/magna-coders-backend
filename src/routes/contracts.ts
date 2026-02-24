@@ -1,4 +1,11 @@
 import { Router } from 'express';
+
+/**
+ * @swagger
+ * tags:
+ *   name: Contracts
+ *   description: Contract management, milestones, escrow, reviews, change requests, disputes, and admin actions
+ */
 import { authenticateToken } from '../middleware/auth';
 import {
   createContract,
@@ -45,13 +52,183 @@ const router = Router();
 router.use(authenticateToken);
 
 // Contract endpoints
+/**
+ * @swagger
+ * /contracts:
+ *   post:
+ *     summary: Create a new contract
+ *     tags: [Contracts]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               currency:
+ *                 type: string
+ *               total_amount:
+ *                 type: number
+ *               funding_mode:
+ *                 type: string
+ *               start_at:
+ *                 type: string
+ *                 format: date-time
+ *               terms_version:
+ *                 type: string
+ *               metadata:
+ *                 type: object
+ *     responses:
+ *       201:
+ *         description: Contract created
+ *       400:
+ *         description: Bad request
+ */
 router.post('/', createContract);
+/**
+ * @swagger
+ * /contracts/{id}/send:
+ *   post:
+ *     summary: Send a contract to a developer
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               developer_id:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Contract sent
+ *       400:
+ *         description: Bad request
+ */
 router.post('/:id/send', sendContract);
+/**
+ * @swagger
+ * /contracts/{id}/accept:
+ *   post:
+ *     summary: Accept a contract
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contract accepted
+ *       400:
+ *         description: Bad request
+ */
 router.post('/:id/accept', acceptContract);
+/**
+ * @swagger
+ * /contracts/{id}/decline:
+ *   post:
+ *     summary: Decline a contract
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contract declined
+ *       400:
+ *         description: Bad request
+ */
 router.post('/:id/decline', declineContract);
+/**
+ * @swagger
+ * /contracts/{id}:
+ *   get:
+ *     summary: Get a contract by ID
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contract details
+ *       404:
+ *         description: Not found
+ */
 router.get('/:id', getContract);
+/**
+ * @swagger
+ * /contracts:
+ *   get:
+ *     summary: List contracts for the authenticated user
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: query
+ *         name: role
+ *         schema:
+ *           type: string
+ *         description: Filter by user role (client or developer)
+ *       - in: query
+ *         name: status
+ *         schema:
+ *           type: string
+ *         description: Filter by contract status
+ *     responses:
+ *       200:
+ *         description: List of contracts
+ */
 router.get('/', getContracts);
+/**
+ * @swagger
+ * /contracts/{id}/pause:
+ *   post:
+ *     summary: Pause a contract
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contract paused
+ */
 router.post('/:id/pause', pauseContract);
+/**
+ * @swagger
+ * /contracts/{id}/resume:
+ *   post:
+ *     summary: Resume a paused contract
+ *     tags: [Contracts]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Contract resumed
+ */
 router.post('/:id/resume', resumeContract);
 
 // Milestone endpoints
