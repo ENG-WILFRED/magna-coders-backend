@@ -6,4 +6,4 @@ This directory contains Express middleware for the magna-coders backend.
 - Authentication middleware
 - Error handling middleware
 - Request validation
-- Logging and monitoring
+- Logging and monitoring (done)

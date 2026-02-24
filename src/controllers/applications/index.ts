@@ -61,3 +61,5 @@ const getUserApplications = async (req: Request, res: Response): Promise<void> =
 };
 
 export { createApplication, getApplicationsForOpportunity, getUserApplications };
+  
+// Path: src/controllers/opportunity.controller.tsimport { Request, Response } from 'express';

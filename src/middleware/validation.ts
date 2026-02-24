@@ -171,8 +171,7 @@ export const validateProjectCreation = (req: Request, res: Response, next: NextF
   if (!categoryId || typeof categoryId !== 'string') {
     errors.push('Category ID is required');
   }
-
-  if (errors.length > 0) {
+ {
     res.status(400).json({
       message: 'Validation failed',
       errors

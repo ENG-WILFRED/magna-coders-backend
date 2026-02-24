@@ -146,4 +146,12 @@ export const createRazorpayPaymentIntent = async (data: PaymentData): Promise<Ra
     };
     throw clientError;
   }
+
+  // we will do the razor pay intergration today night with all other payment intergration
+  //mpesa
+  //paypall
+  //bank account
+  //wallet payment
+  // i will insert the cryptograthy index by today night insertino method
+  // then sasa tutaintergrate na frontend fully 
 };

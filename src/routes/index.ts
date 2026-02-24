@@ -14,6 +14,10 @@ import applicationRoutes from './applications';
 import bookmarkRoutes from './bookmarks';
 import fileRoutes from './files';
 import companyRoutes from './companies';
+import opportunityRoutes from './opportunities';
+import contractRoutes from './contracts';
+import coinRoutes from './coins';
+import adminRoutes from './admin';
 
 const router: Router = express.Router();
 
@@ -27,9 +31,7 @@ router.use('/comments', commentRoutes);
 router.use('/chat', chatRoutes);
 router.use('/social', socialRoutes);
 router.use('/otp', otpRoutes);
-import opportunityRoutes from './opportunities';
 router.use('/opportunities', opportunityRoutes);
-
 router.use('/applications', applicationRoutes);
 router.use('/bookmarks', bookmarkRoutes);
 router.use('/files', fileRoutes);
@@ -40,6 +42,15 @@ router.use('/integrations', integrationRoutes);
 
 // Webhook Routes (Payment Providers)
 router.use('/webhooks', webhookRoutes);
+
+// Contracts Routes (Escrow, Milestones, Disputes)
+router.use('/contracts', contractRoutes);
+
+// Coins Routes (Wallet, Packages, Store, Admin)
+router.use('/coins', coinRoutes);
+
+// Admin Routes (Dashboard, User Management, Analytics)
+router.use('/admin', adminRoutes);
 
 // Health check
 router.get('/health', (req, res) => {
@@ -66,7 +77,10 @@ router.get('/', (req, res) => {
       social: '/api/social',
       otp: '/api/otp',
       integrations: '/api/integrations',
-      webhooks: '/api/webhooks'
+      webhooks: '/api/webhooks',
+      contracts: '/api/contracts',
+      coins: '/api/coins',
+      admin: '/api/admin'
     },
     docs: '/api/docs',
     integrations: {
@@ -96,7 +110,10 @@ router.get('/docs', (req, res) => {
       'Project Marketplace',
       'Content Management',
       'Notification System',
-      'OTP Services'
+      'OTP Services',
+      'Magna Contracts (Escrow, Milestones, Disputes)',
+      'Magna Coins (Wallet, Packages, Store, Platform Fees)',
+      'Admin Dashboard (Analytics, User Management, Revenue)'
     ]
   });
 });
