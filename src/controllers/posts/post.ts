@@ -43,7 +43,7 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 			take: limit,
 			orderBy,
 			include: {
-				author: {
+				users: {
 					select: { id: true, username: true, avatar_url: true }
 				},
 				categories: {
@@ -67,6 +67,7 @@ const getPosts = async (req: Request, res: Response): Promise<void> => {
 	res.status(200).json({ 
 		posts: posts.map(post => ({
 			...post,
+			author: post.users, // Map users to author for frontend compatibility
 			likesCount: post._count.likes,
 			commentsCount: post._count.comments,
 			tags: post.post_tags.map(pt => pt.tags)
@@ -84,7 +85,7 @@ const getPostById = async (req: Request, res: Response): Promise<void> => {
 	const post = await prisma.posts.findUnique({
 		where: { id },
 		include: {
-			author: { select: { id: true, username: true, avatar_url: true } },
+			users: { select: { id: true, username: true, avatar_url: true } },
 			categories: { select: { id: true, name: true } },
 			post_tags: { include: { tags: { select: { id: true, name: true } } } },
 			comments: {
@@ -92,10 +93,10 @@ const getPostById = async (req: Request, res: Response): Promise<void> => {
 				where: { parent_id: null },
 				take: 10,
 				include: { 
-					author: { select: { id: true, username: true, avatar_url: true } },
+					users: { select: { id: true, username: true, avatar_url: true } },
 					replies: {
 						orderBy: { created_at: 'asc' },
-						include: { author: { select: { id: true, username: true, avatar_url: true } } }
+						include: { users: { select: { id: true, username: true, avatar_url: true } } }
 					}
 				}
 			},
@@ -113,6 +114,15 @@ const getPostById = async (req: Request, res: Response): Promise<void> => {
 
 	res.status(200).json({
 		...post,
+		author: post.users, // Map users to author for frontend compatibility
+		comments: post.comments.map(comment => ({
+			...comment,
+			author: comment.users,
+			replies: comment.replies?.map(reply => ({
+				...reply,
+				author: reply.users
+			}))
+		})),
 		likesCount: post._count.likes,
 		commentsCount: post._count.comments,
 		isLiked: userId ? post.likes.some(l => l.user_id === userId) : false,
@@ -174,7 +184,7 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
 	const createdPost = await prisma.posts.findUnique({
 		where: { id: postId },
 		include: {
-			author: { select: { id: true, username: true, avatar_url: true } },
+			users: { select: { id: true, username: true, avatar_url: true } },
 			post_tags: { include: { tags: { select: { id: true, name: true } } } },
 			_count: { select: { likes: true, comments: true } }
 		}
@@ -182,6 +192,7 @@ const createPost = async (req: Request, res: Response): Promise<void> => {
 
 	res.status(201).json({
 		...createdPost,
+		author: createdPost?.users, // Map users to author for frontend compatibility
 		likesCount: createdPost?._count.likes || 0,
 		commentsCount: createdPost?._count.comments || 0,
 		tags: createdPost?.post_tags.map(pt => pt.tags) || []

@@ -18,6 +18,7 @@ import opportunityRoutes from './opportunities';
 import contractRoutes from './contracts';
 import coinRoutes from './coins';
 import adminRoutes from './admin';
+import aiRoutes from './ai';
 
 const router: Router = express.Router();
 
@@ -52,6 +53,9 @@ router.use('/coins', coinRoutes);
 // Admin Routes (Dashboard, User Management, Analytics)
 router.use('/admin', adminRoutes);
 
+// AI Routes (Backend Integration for Magna AI)
+router.use('/ai', aiRoutes);
+
 // Health check
 router.get('/health', (req, res) => {
   res.status(200).json({
@@ -80,7 +84,8 @@ router.get('/', (req, res) => {
       webhooks: '/api/webhooks',
       contracts: '/api/contracts',
       coins: '/api/coins',
-      admin: '/api/admin'
+      admin: '/api/admin',
+      ai: '/api/ai'
     },
     docs: '/api/docs',
     integrations: {
@@ -113,7 +118,8 @@ router.get('/docs', (req, res) => {
       'OTP Services',
       'Magna Contracts (Escrow, Milestones, Disputes)',
       'Magna Coins (Wallet, Packages, Store, Platform Fees)',
-      'Admin Dashboard (Analytics, User Management, Revenue)'
+      'Admin Dashboard (Analytics, User Management, Revenue)',
+      'AI Backend Integration (Context-Aware AI Assistant)'
     ]
   });
 });

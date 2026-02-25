@@ -258,3 +258,6 @@ export const refreshToken = async (req: Request, res: Response): Promise<void> =
     });
   }
 };
+
+// Export OAuth handlers
+export { handleOAuthCallback, linkOAuthAccount, signOut } from './oauthController';

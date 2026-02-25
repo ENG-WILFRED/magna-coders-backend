@@ -173,17 +173,11 @@ const getUserFeed = async (req: Request, res: Response):Promise<void> => {
     take: limit,
     skip: (page - 1) * limit,
     include: {
-      author: {
+      users: {
         select: {
           id: true,
           username: true,
           avatar_url: true,
-        }
-      },
-      categories: {
-        select: {
-          id: true,
-          name: true,
         }
       },
       _count: {
@@ -196,10 +190,15 @@ const getUserFeed = async (req: Request, res: Response):Promise<void> => {
   });
 
   const postsWithCounts = feedPosts.map(post => ({
-    ...post,
+    id: post.id,
+    title: post.title,
+    content: post.content,
+    author_id: post.author_id,
+    created_at: post.created_at,
+    updated_at: post.updated_at,
+    author: post.users, // Map users to author for frontend compatibility
     commentsCount: post._count.comments,
     likesCount: post._count.likes,
-    _count: undefined,
   }));
 
   res.status(200).json(postsWithCounts);

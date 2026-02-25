@@ -6,7 +6,8 @@ import { SECRET } from '../utils/config';
 const prisma = new PrismaClient();
 
 interface JwtPayload {
-  id: string;
+  id?: string;
+  user_id?: string;
   iat?: number;
   exp?: number;
 }
@@ -40,10 +41,21 @@ export const authenticateToken = async (
     // Verify token
     const decoded = jwt.verify(token, SECRET) as JwtPayload;
 
+    // Support both 'id' and 'user_id' for backward compatibility
+    const userId = decoded.id || decoded.user_id;
+
+    if (!userId) {
+      res.status(401).json({
+        success: false,
+        message: 'Invalid token format'
+      });
+      return;
+    }
+
     // Check if user exists
-const user = await prisma.users.findUnique({
-		where: { id: decoded.id },
-		select: { id: true }
+    const user = await prisma.users.findUnique({
+      where: { id: userId },
+      select: { id: true }
     });
 
     if (!user) {
@@ -55,7 +67,7 @@ const user = await prisma.users.findUnique({
     }
 
     // Attach user ID to request
-    req.user = decoded.id;
+    req.user = userId;
 
     next();
   } catch (error) {

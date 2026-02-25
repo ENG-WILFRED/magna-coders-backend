@@ -5,7 +5,7 @@ A comprehensive backend API for a developer community platform built with Node.j
 ## Features
 
 ### Core Features
-- **User Authentication & Authorization** - JWT-based auth with role management
+- **User Authentication & Authorization** - JWT-based auth with role management and Google OAuth 2.0
 - **Social Media Integration** - GitHub, LinkedIn, Twitter, Discord connections
 - **Payment Processing** - Stripe, PayPal, M-Pesa, and wallet system
 - **Real-time Chat** - Direct and group messaging
@@ -73,6 +73,9 @@ backend/
 ### Authentication
 - `POST /api/auth/login` - User login
 - `POST /api/auth/register` - User registration
+- `POST /api/auth/oauth/callback` - OAuth callback handler
+- `POST /api/auth/oauth/link` - Link OAuth account to existing user
+- `POST /api/auth/signout` - Sign out and invalidate session
 - `GET /api/auth/profile/:id` - Get user profile
 - `PUT /api/auth/profile/:id` - Update user profile
 
@@ -139,6 +142,14 @@ DATABASE_URL="postgresql://user:password@localhost:5432/magna_coders"
 
 # JWT
 JWT_SECRET="your-super-secret-jwt-key"
+JWT_EXPIRES_IN="7d"
+
+# Google OAuth 2.0
+GOOGLE_CLIENT_ID="your-google-client-id.apps.googleusercontent.com"
+GOOGLE_CLIENT_SECRET="your-google-client-secret"
+
+# Frontend URL (for CORS)
+FRONTEND_URL="http://localhost:3000"
 
 # Social Media APIs
 GITHUB_CLIENT_ID="your-github-client-id"
@@ -166,6 +177,8 @@ EMAIL_PASS="your-app-password"
 # Redis (optional)
 REDIS_URL="redis://localhost:6379"
 ```
+
+> **Note**: For detailed Google OAuth setup instructions, see [OAUTH_SETUP.md](./OAUTH_SETUP.md)
 
 ## Deployment
 
@@ -198,6 +211,8 @@ npm run db:generate
 
 ### Core Models
 - **User** - Platform users with roles and verification
+- **Account** - OAuth provider accounts linked to users
+- **Session** - User authentication sessions
 - **Post** - Content posts with categories and verification
 - **Project** - Freelance projects with bidding
 - **Comment** - Discussion system

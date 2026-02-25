@@ -7,9 +7,13 @@ import apiRoutes from './routes';
 import { errorHandler, notFound } from './middleware/errorHandler';
 import { swaggerSpec } from './utils/swagger';
 import { OTPService } from './services';
+import { validateEnv } from './utils/validateEnv';
 
 // Load environment variables
 dotenv.config();
+
+// Validate environment variables on startup
+validateEnv();
 
 const app: Express = express();
 const PORT = process.env.PORT || 5000;
